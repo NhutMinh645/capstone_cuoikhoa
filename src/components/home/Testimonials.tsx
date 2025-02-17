@@ -1,9 +1,7 @@
 import Slider from "react-slick";
-import "slick-carousel/slick/slick.css";
-import "slick-carousel/slick/slick-theme.css";
-import styled from "styled-components";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { LeftOutlined, RightOutlined } from "@ant-design/icons";
+import styled from "styled-components";
 import user1 from "../../assets/user1.jpg";
 import user2 from "../../assets/user2.jpg";
 import user3 from "../../assets/user3.jpg";
@@ -17,10 +15,9 @@ import testimonial2 from "../../assets/videos/testimonial-2.mp4";
 import testimonial3 from "../../assets/videos/testimonial-3.mp4";
 import testimonial4 from "../../assets/videos/testimonial-4.mp4";
 
-
 const Testimonials: React.FC = () => {
   const [playingVideo, setPlayingVideo] = useState<number | null>(null);
-  const [loadedVideos, setLoadedVideos] = useState<{ [key: number]: boolean }>({});
+  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
 
   const testimonials = [
     {
@@ -61,11 +58,47 @@ const Testimonials: React.FC = () => {
     },
   ];
 
+  const handlePlayPause = (index: number) => {
+   
+    if (playingVideo === index) {
+      setPlayingVideo(null);
+      const video = videoRefs.current[index];
+      if (video) {
+        video.pause();
+        video.currentTime = 0; 
+        video.style.display = "none"; 
+      }
+    } else {
+     
+      setPlayingVideo(index);
+      videoRefs.current.forEach((video, index) => {
+        if (video && index !== index) {
+          video.pause();
+          video.currentTime = 0;
+          video.style.display = "none";
+        }
+      });
+  
+     
+      const video = videoRefs.current[index];
+      if (video) {
+        video.style.display = "block"; 
+        video.play(); 
+      }
+    }
+  };
   
 
-  const handlePlayPause = (index: number) => {
-    setPlayingVideo(playingVideo === index ? null : index);
-    setLoadedVideos((prev) => ({ ...prev, [index]: true }));
+  
+  const handleAfterChange = (index: number) => {
+    setPlayingVideo(null); 
+    videoRefs.current.forEach((video) => {
+      if (video) {
+        video.pause();
+        video.currentTime = 0;
+        video.style.display = "none"; 
+      }
+    });
   };
 
   const CustomPrevArrow = (props: any) => {
@@ -76,7 +109,7 @@ const Testimonials: React.FC = () => {
       </ArrowButton>
     );
   };
-  
+
   const CustomNextArrow = (props: any) => {
     const { onClick } = props;
     return (
@@ -85,59 +118,63 @@ const Testimonials: React.FC = () => {
       </ArrowButton>
     );
   };
-  
-  
+
   const settings = {
     dots: true,
-    infinite: true,  
+    infinite: true,
     speed: 500,
     slidesToShow: 1,
     slidesToScroll: 1,
     arrows: true,
     prevArrow: <CustomPrevArrow />,
     nextArrow: <CustomNextArrow />,
+    afterChange: handleAfterChange, // Dừng tất cả video khi chuyển slide
   };
-  
+
   return (
     <Section>
       <Container>
-      <SliderContainer>
-        <Slider {...settings}>
-         
-
-          {testimonials.map((item, index) => (
-            <TestimonialCard key={item.id}>
-              <Media>
-              {playingVideo === index && loadedVideos[index] ? (
-  <Video 
-    src={item.video} 
-    controls 
-    autoPlay 
-    onEnded={() => setPlayingVideo(null)} 
-  />
-) : (
-  <Thumbnail onClick={() => handlePlayPause(index)}>
-    <img src={item.image} alt={item.name} />
-    {playingVideo !== index && <CustomPlayButton />}
-  </Thumbnail>
-)}
-
-              </Media>
-              <Content>
-              <h4>{item.name}, {item.position}  |<CompanyLogo src={item.logo} alt="Company Logo" />
-              </h4>
-                <p>{item.quote}</p>
-              </Content>
-            </TestimonialCard>
-          ))}
-        </Slider>
-      </SliderContainer>
+        <SliderContainer>
+          <Slider {...settings}>
+            {testimonials.map((item, index) => (
+              <TestimonialCard key={item.id}>
+                <Media>
+                  {playingVideo === index ? (
+                    <Video
+                      ref={(el) => (videoRefs.current[index] = el)} // Gán tham chiếu video
+                      src={item.video}
+                      controls
+                      autoPlay
+                      onEnded={() => setPlayingVideo(null)} // Dừng video khi kết thúc
+                    />
+                  ) : (
+                    <Thumbnail onClick={() => handlePlayPause(index)}>
+                      <img src={item.image} alt={item.name} />
+                      {playingVideo !== index && <CustomPlayButton />}
+                    </Thumbnail>
+                  )}
+                </Media>
+                <Content>
+                  <h4>
+                    {item.name}, {item.position} | <CompanyLogo src={item.logo} alt="Company Logo" />
+                  </h4>
+                  <p>{item.quote}</p>
+                </Content>
+              </TestimonialCard>
+            ))}
+          </Slider>
+        </SliderContainer>
       </Container>
     </Section>
   );
 };
 
 export default Testimonials;
+
+
+
+
+
 
 // Styled Components
 const Section = styled.section`
